@@ -1,0 +1,3 @@
+= Openshift 集群管理界面
+
+image:img/ocp-cluster-management-console.png[]

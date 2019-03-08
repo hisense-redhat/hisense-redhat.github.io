@@ -1,0 +1,3 @@
+= API 经济：API 注册映射
+
+image:img/3scale-api-mapping.png[]

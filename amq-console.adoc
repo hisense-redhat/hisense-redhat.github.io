@@ -1,0 +1,3 @@
+= 中台服务：AMQ
+
+image:img/amq-console.png[]

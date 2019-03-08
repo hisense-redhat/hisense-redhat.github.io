@@ -1,0 +1,47 @@
+= 快速操作手册
+:toc: manual
+
+[cols="2,2,5a"]
+|===
+|访问链接 |用户名/密码 |说明
+
+|https://master.hisense.com:8443
+|admin/admin
+|OpenShift 3.11 Console
+
+|https://console.apps.hisense.com/
+|admin/admin
+|OpenShift 集群管理界面
+
+|https://3scale-admin.apps.hisense.com
+|admin/redhat
+|3Scale 管理控制台
+
+|https://master.apps.hisense.com/
+|master/redhat
+|3Scale 租户管理界面
+
+|https://3scale.apps.hisense.com
+|
+|开发者门户
+
+|http://amq-console-message-service.apps.hisense.com/console/
+|admin/admin
+|AMQ 管理控制台
+
+|http://myapp-rhdmcentr-rules-service.apps.hisense.com
+|adminUser/RedHat
+|RHDM 规则设计器
+|===
+
+[source, text]
+.*注意: 如上域名需要配制静态 IP 映射，如下*
+----
+10.19.40.208 master.hisense.com
+10.19.40.209 redhat-admin.apps.hisense.com console.apps.hisense.com amq-console-message-service.apps.hisense.com
+10.19.40.209 3scale-admin.apps.hisense.com 3scale.apps.hisense.com master.apps.hisense.com hisense.apps.hisense.com hisense-admin.apps.hisense.com
+10.19.40.209 cooking-apicast-prod.apps.hisense.com cooking-apicast-staging.apps.hisense.com fruits-apicast-prod.apps.hisense.com fruits-apicast-staging.apps.hisense.com
+10.19.40.209 hawkular-metrics.apps.hisense.com registry-console-default.apps.hisense.com
+10.19.40.209 amqp-transform-message-service.apps.hisense.com mqtt-transform-message-service.apps.hisense.com data-service-odata.apps.hisense.com mock-soap-service.apps.hisense.com
+10.19.40.209 cep-fraud-detection-rules-service.apps.hisense.com myapp-rhdmcentr-rules-service.apps.hisense.com myapp-kieserver-rules-service.apps.hisense.com
+----

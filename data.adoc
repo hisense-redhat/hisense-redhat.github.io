@@ -1,0 +1,226 @@
+= 数据中台
+:toc: manual
+
+== 数据源准备
+
+=== Mysql
+
+*1. 下载模版*
+
+https://github.com/openshift/origin/blob/release-3.11/examples/db-templates/mysql-persistent-template.json
+
+[source, text]
+.*2. 通过模版部署*
+----
+$ oc create -f etc/json/mysql-persistent-template.json 
+template "mysql-persistent" created
+
+$ oc new-app mysql-persistent --param MYSQL_DATABASE=ACCOUNTS --param MYSQL_USER=test_user --param MYSQL_PASSWORD=test_pass --param MYSQL_ROOT_PASSWORD=redhat --param DATABASE_SERVICE_NAME=mysql-accounts
+----
+
+[source, text]
+.*3. 初始化数据*
+----
+$ oc get pods
+NAME                     READY     STATUS    RESTARTS   AGE
+mysql-accounts-1-lvfpn   1/1       Running   0          <invalid>
+
+$ oc port-forward mysql-accounts-1-lvfpn 3306:3306
+
+$ mysql -h127.0.0.1 -utest_user -ptest_pass -P3306 ACCOUNTS < etc/sql/mysql/customer-schema.sql
+
+$ mysql -h127.0.0.1 -utest_user -ptest_pass -P3306 ACCOUNTS -e "SELECT * FROM CUSTOMER"
++----------+-----------+-------------+----------------------------+-----------------------+---------------+----------------+---------+---------------+
+| SSN      | FIRSTNAME | LASTNAME    | ST_ADDRESS                 | APT_NUMBER            | CITY          | STATE          | ZIPCODE | PHONE         |
++----------+-----------+-------------+----------------------------+-----------------------+---------------+----------------+---------+---------------+
+| CST01002 | Joseph    | Smith       | 1234 Main Street           | Apartment 56          | New York      | New York       | 10174   | (646)555-1776 |
+| CST01003 | Nicholas  | Ferguson    | 202 Palomino Drive         | NULL                  | Pittsburgh    | Pennsylvania   | 15071   | (412)555-4327 |
+| CST01004 | Jane      | Aire        | 15 State Street            | NULL                  | Philadelphia  | Pennsylvania   | 19154   | (814)555-6789 |
+| CST01005 | Charles   | Jones       | 1819 Maple Street          | Apartment 17F         | Stratford     | Connecticut    | 06614   | (203)555-3947 |
+| CST01006 | Virginia  | Jefferson   | 1710 South 51st Street     | Apartment 3245        | New York      | New York       | 10175   | (718)555-2693 |
+| CST01007 | Ralph     | Bacon       | 57 Barn Swallow Avenue     | NULL                  | Charlotte     | North Carolina | 28205   | (704)555-4576 |
+| CST01008 | Bonnie    | Dragon      | 88 Cinderella Lane         | NULL                  | Jacksonville  | Florida        | 32225   | (904)555-6514 |
+| CST01009 | Herbert   | Smith       | 12225 Waterfall Way        | Building 100, Suite 9 | Portland      | Oregon         | 97220   | (971)555-7803 |
+| CST01015 | Jack      | Corby       | 1 Lone Star Way            | NULL                  | Dallas        | Texas          | 75231   | (469)555-8023 |
+| CST01019 | Robin     | Evers       | 1814 Falcon Avenue         | NULL                  | Atlanta       | Georgia        | 30355   | (470)555-4390 |
+| CST01020 | Lloyd     | Abercrombie | 1954 Hughes Parkway        | NULL                  | Los Angeles   | California     | 90099   | (213)555-2312 |
+| CST01021 | Scott     | Watters     | 24 Mariner Way             | NULL                  | Seattle       | Washington     | 98124   | (206)555-6790 |
+| CST01022 | Sandra    | King        | 96 Lakefront Parkway       | NULL                  | Minneapolis   | Minnesota      | 55426   | (651)555-9017 |
+| CST01027 | Maryanne  | Peters      | 35 Grand View Circle       | Apartment 5F          | Cincinnati    | Ohio           | 45232   | (513)555-9067 |
+| CST01034 | Corey     | Snyder      | 1760 Boston Commons Avenue | Suite 543             | Boston        | Massachusetts  | 02136   | (617)555-3546 |
+| CST01035 | Henry     | Thomas      | 345 Hilltop Parkway        | NULL                  | San Francisco | California     | 94129   | (415)555-2093 |
+| CST01036 | James     | Drew        | 876 Lakefront Lane         | NULL                  | Cleveland     | Ohio           | 44107   | (216)555-6523 |
++----------+-----------+-------------+----------------------------+-----------------------+---------------+----------------+---------+---------------+
+----
+
+=== PostgreSQL
+
+*1. 下载模版*
+
+https://github.com/openshift/origin/blob/release-3.11/examples/db-templates/postgresql-persistent-template.json
+
+[source, text]
+.*2. 通过模版部署*
+----
+$ oc create -f etc/json/postgresql-persistent-template.json 
+template "postgresql-persistent" created
+
+$ oc new-app postgresql-persistent --param POSTGRESQL_DATABASE=CUSTOMERS --param POSTGRESQL_USER=test_user --param POSTGRESQL_PASSWORD=test_pass --param DATABASE_SERVICE_NAME=postgresql-customers
+----
+
+[source, text]
+.*3. 初始化数据*
+----
+$ oc get pods | grep postgresql
+postgresql-customers-1-n9csn   1/1       Running     0          <invalid>
+
+$ oc rsh postgresql-customers-1-n9csn
+
+sh-4.2$ PGPASSWORD=$POSTGRESQL_PASSWORD psql -h postgresql-customers $POSTGRESQL_DATABASE $POSTGRESQL_USER
+psql (9.6.10)
+Type "help" for help.
+
+DROP TABLE IF EXISTS ADDRESS;
+DROP TABLE IF EXISTS CUSTOMER;
+
+CREATE TABLE CUSTOMER
+(
+   ID bigint,
+   SSN char(25),
+   NAME varchar(64),
+   CONSTRAINT CUSTOMER_PK PRIMARY KEY(ID)
+);
+
+CREATE TABLE ADDRESS
+(
+   ID bigint,
+   STREET char(25),
+   ZIP char(10),
+   CUSTOMER_ID bigint,
+   CONSTRAINT ADDRESS_PK PRIMARY KEY(ID),
+   CONSTRAINT CUSTOMER_FK FOREIGN KEY (CUSTOMER_ID) REFERENCES CUSTOMER (ID)
+);
+
+INSERT INTO CUSTOMER (ID,SSN,NAME) VALUES (10, 'CST01002','Joseph Smith');
+INSERT INTO CUSTOMER (ID,SSN,NAME) VALUES (11, 'CST01003','Nicholas Ferguson');
+INSERT INTO CUSTOMER (ID,SSN,NAME) VALUES (12, 'CST01004','Jane Aire');
+
+INSERT INTO ADDRESS (ID, STREET, ZIP, CUSTOMER_ID) VALUES (10, 'Main St', '12345', 10);
+
+CUSTOMERS=> SELECT * FROM CUSTOMER;
+ id |            ssn            |       name        
+----+---------------------------+-------------------
+ 10 | CST01002                  | Joseph Smith
+ 11 | CST01003                  | Nicholas Ferguson
+ 12 | CST01004                  | Jane Aire
+(3 rows)
+
+CUSTOMERS=> \q
+sh-4.2$ exit
+exit
+----
+
+=== MongoDB
+
+*1. 下载模版*
+
+https://github.com/openshift/origin/blob/release-3.11/examples/db-templates/mongodb-persistent-template.json
+
+[source, text]
+.*2. 通过模版部署*
+----
+$ oc create -f etc/json/mongodb-persistent-template.json 
+template "mongodb-persistent" created
+
+$ oc new-app mongodb-persistent --param MONGODB_ADMIN_PASSWORD=redhat --param MONGODB_DATABASE=EMPLOYEES --param MONGODB_USER=test_user --param MONGODB_PASSWORD=test_pass --param DATABASE_SERVICE_NAME=mongodb-employees
+----
+
+[source, text]
+.*3. 初始化数据*
+----
+$ oc rsh mongodb-employees-1-r8wxg
+
+sh-4.2$ mongo EMPLOYEES -u test_user -p test_pass
+MongoDB shell version: 3.2.10
+connecting to: EMPLOYEES
+
+db.EMPLOYEES.insert({employee_id: '1', FirstName: 'Test1', LastName: 'Test1'});
+db.EMPLOYEES.insert({employee_id: '2', FirstName: 'Test2', LastName: 'Test2'});
+db.EMPLOYEES.insert({employee_id: '3', FirstName: 'Test3', LastName: 'Test3'});
+
+> db.EMPLOYEES.find()
+{ "_id" : ObjectId("5c7847cfcebf337a973b8321"), "employee_id" : "1", "FirstName" : "Test1", "LastName" : "Test1" }
+{ "_id" : ObjectId("5c7847ddcebf337a973b8322"), "employee_id" : "2", "FirstName" : "Test2", "LastName" : "Test2" }
+{ "_id" : ObjectId("5c7847e3cebf337a973b8323"), "employee_id" : "3", "FirstName" : "Test3", "LastName" : "Test3" }
+----
+
+== 本地测试
+
+[source, text]
+.*1. 编译*
+----
+$ mvn clean install
+----
+
+[source, text]
+.*2. 本地端口转发*
+----
+$ oc get pods
+NAME                           READY     STATUS      RESTARTS   AGE
+mongodb-employees-1-r8wxg      1/1       Running     0          <invalid>
+mysql-accounts-1-lvfpn         1/1       Running     0          53m
+postgresql-customers-1-n9csn   1/1       Running     0          24m
+
+$ oc port-forward mysql-accounts-1-lvfpn 3306:3306
+
+$ oc port-forward postgresql-customers-1-n9csn 5432:5432
+
+$ oc port-forward mongodb-employees-1-r8wxg 27017:27017
+----
+
+[source, text]
+.*3. 启动*
+----
+$ java -Dswarm.datasources.data-sources.ACCOUNTS_DS.connection-url=jdbc:mysql://127.0.0.1:3306/ACCOUNTS \
+       -Dswarm.datasources.data-sources.ACCOUNTS_DS.user-name=test_user \
+       -Dswarm.datasources.data-sources.ACCOUNTS_DS.password=test_pass \
+       -Dswarm.datasources.data-sources.ACCOUNTS_DS.driver-name=mysql \
+       -Dswarm.datasources.data-sources.CUSTOMERS_DS.connection-url=jdbc:postgresql://127.0.0.1:5432/CUSTOMERS \
+       -Dswarm.datasources.data-sources.CUSTOMERS_DS.user-name=test_user \
+       -Dswarm.datasources.data-sources.CUSTOMERS_DS.password=test_pass \
+       -Dswarm.datasources.data-sources.CUSTOMERS_DS.driver-name=postgresql \
+       -Dswarm.resource-adapters.resource-adapters.mongodbDS.connection-definitions.mongodbDS.class-name=org.teiid.resource.adapter.mongodb.MongoDBManagedConnectionFactory \
+       -Dswarm.resource-adapters.resource-adapters.mongodbDS.connection-definitions.mongodbDS.jndi-name=java:/mongoDS \
+       -Dswarm.resource-adapters.resource-adapters.mongodbDS.connection-definitions.mongodbDS.config-properties.remoteServerList.value=mongodb://127.0.0.1:27017 \
+       -Dswarm.resource-adapters.resource-adapters.mongodbDS.connection-definitions.mongodbDS.config-properties.database.value=EMPLOYEES \
+       -Dswarm.resource-adapters.resource-adapters.mongodbDS.connection-definitions.mongodbDS.config-properties.username.value=test_user \
+       -Dswarm.resource-adapters.resource-adapters.mongodbDS.connection-definitions.mongodbDS.config-properties.password.value=test_pass \
+       -Dswarm.resource-adapters.resource-adapters.mongodbDS.module=org.jboss.teiid.resource-adapter.mongodb \
+       -jar target/data-service-1.0.0-thorntail.jar
+----
+
+*4. 使用如下 URL 进行本地测试*
+
+* http://localhost:8080/odata4/Portfolio.1/Accounts/$metadata
+* http://localhost:8080/odata4/Portfolio.1/Accounts/CUSTOMER
+
+* http://localhost:8080/odata4/Portfolio.1/Customers/$metadata
+* http://localhost:8080/odata4/Portfolio.1/Customers/customer
+
+* http://localhost:8080/odata4/Portfolio.1/Employees/$metadata
+
+== 部署到 OpenShift
+
+[source, text]
+.*1. 部署*
+----
+$ mvn package fabric8:deploy -Popenshift
+----
+
+*2. 使用如下 URL 进行本地测试*
+
+* http://data-service-odata.apps.hisense.com/odata4/Portfolio.1/Accounts/$metadata
+* http://data-service-odata.apps.hisense.com/odata4/Portfolio.1/Accounts/CUSTOMER?$format=JSON
+
+* http://data-service-odata.apps.hisense.com/odata4/Portfolio.1/Customers/$metadata
+* http://data-service-odata.apps.hisense.com/odata4/Portfolio.1/Customers/customer?$format=JSON

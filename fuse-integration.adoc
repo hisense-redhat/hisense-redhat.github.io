@@ -1,0 +1,3 @@
+= 中台服务：物流配送服务
+
+image:img/fuse-integration.png[]
